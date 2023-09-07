@@ -2,13 +2,15 @@
 # coding: utf-8
 
 import asyncio
+import bilibili_api as bapi
 from danmaku_db import DanmakuDB
 
 
 async def main() -> None:
     db = DanmakuDB()
-    await db.fetch_from_video('BV1j4411W7F7')
-    await db.fetch_from_video('BV1yt4y1Q7SS')
+    credential = bapi.login.login_with_qrcode()
+    await db.fetch_from_video('BV1j4411W7F7', credential)
+    await db.fetch_from_video('BV1yt4y1Q7SS', credential)
     db.to_excel('test.xlsx')
 
 

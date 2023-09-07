@@ -2,11 +2,14 @@
 # coding: utf-8
 
 import asyncio
-import bilibili_api as bapi
-import xml.etree.ElementTree as xmlReader
-import io
-import pandas as pd
+import math
 
+import bilibili_api as bapi
+import bilibili_api.utils.credential as bapi_credential
+import pandas as pd
+import danmaku_db.dm_pb2 as Danmaku
+import requests
+import json
 
 class DanmakuDBError(Exception):
     pass
@@ -34,20 +37,62 @@ class DanmakuDB:
         """Set the danmaku at the specified index"""
         self.danmaku_list[key] = value
 
-    async def fetch_from_video(self, bvid):
+    async def fetch_from_video(self, bvid, credential=None):
         """Fetch danmakus from specific video and append them to danmaku_list"""
+        def fetch_danmaku_segment(cid, segment_index):
+            api_url = 'https://api.bilibili.com/x/v2/dm/web/seg.so'
+            # segment_index: 从1开始，每个片段代表一个6分钟的视频片段下的弹幕数据
+            params = {
+                'type': 1,
+                'oid': cid,
+                'segment_index': segment_index
+            }
+            resp = None
+            # 登录后获取的弹幕内容更完整
+            if credential is None:
+                resp = requests.get(api_url, params)
+            elif isinstance(credential, bapi_credential.Credential):
+                resp = requests.get(api_url, params, cookies=credential.get_cookies())
+            else:
+                raise TypeError('Provided credential is of incorrect type')
+
+            data = resp.content
+            # 调用编译的Protobuf类对弹幕数据反序列化
+            danmaku_seg = Danmaku.DmSegMobileReply()
+            danmaku_seg.ParseFromString(data)
+            # 获取弹幕内容
+            danmaku_array = []
+            for elem in danmaku_seg.elems:
+                # 特殊处理高级弹幕，其内容为一个数组，弹幕实际内容在4号元素
+                try:
+                    advanced_danmaku = json.loads(elem.content)
+                    if isinstance(advanced_danmaku, list):
+                        danmaku_array.append(advanced_danmaku[4])
+                    else:
+                        danmaku_array.append(elem.content)
+                except json.decoder.JSONDecodeError:
+                    danmaku_array.append(elem.content)
+            return danmaku_array
+
         video = bapi.video.Video(bvid)
-        danmaku_xml = await video.get_danmaku_xml(page_index=0)
-        xml_tree = xmlReader.parse(io.StringIO(danmaku_xml))
-        xml_root = xml_tree.getroot()
-        danmaku_list = [d.text for d in xml_root.findall('./d')]
+        cid = await video.get_cid(0)
+        info = await video.get_info()
+        segments = math.ceil(info['duration'] / (60 * 6))
+        danmaku_list = []
+        for seg in range(1, segments + 1):
+            danmaku_list += fetch_danmaku_segment(cid, seg)
         self.danmaku_list[bvid] = danmaku_list
 
     def to_excel(self, filename):
         """Write danmakus to Excel sheets"""
         if len(self.danmaku_list) == 0:
             raise DanmakuDBError('Empty database')
-        danmaku_dataframe = pd.DataFrame(self.danmaku_list)
+        danmaku_dataframe = pd.DataFrame()
+        for bvid, danmakus in self.danmaku_list.items():
+            # 根据需要增加行数
+            danmaku_dataframe = danmaku_dataframe.reindex(range(max(len(danmaku_dataframe), len(danmakus))))
+            danmaku_dataframe[bvid] = danmakus
+
         danmaku_dataframe.to_excel(filename, sheet_name='danmakus', index=False)
         with pd.ExcelWriter(filename, mode='a', engine='openpyxl') as writer:
             danmaku_value_counts = pd.concat([danmaku_dataframe[col] for col in danmaku_dataframe.columns], ignore_index=True).value_counts()
