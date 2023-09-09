@@ -10,6 +10,7 @@ TEST_VALID_BVID2 = 'BV1yt4y1Q7SS'
 TEST_MISSING_BVID = 'BV1gt411z78v'
 TEST_INVALID_BVID = 'BV1'
 TEST_EXCEL_FILENAME = 'test_danmakus.xlsx'
+TEST_KEYWORD = '让子弹飞'
 
 
 class TestDanmakuDB:
@@ -43,20 +44,29 @@ class TestDanmakuDB:
     async def test_fetch_missing(self, db):
         await db.fetch_from_video(TEST_MISSING_BVID)
 
+    @pytest.mark.asyncio
+    async def test_fetch_search(self, db):
+        await db.fetch_from_search_result(TEST_KEYWORD, 30)
+        assert len(db) == 30 and len(db[db.bvids()[0]]) > 10
+
     @pytest.mark.xfail
     @pytest.mark.asyncio
     async def test_fetch_invalid(self, db):
         await db.fetch_from_video(TEST_INVALID_BVID)
 
     @pytest.mark.asyncio
-    async def test_excel_full(self, db):
+    async def test_to_excel_full(self, db):
         await db.fetch_from_video(TEST_VALID_BVID1)
         db.to_excel(TEST_EXCEL_FILENAME)
         assert os.path.exists(TEST_EXCEL_FILENAME)
         os.unlink(TEST_EXCEL_FILENAME)
 
     @pytest.mark.xfail
-    def test_excel_empty(self, db):
+    def test_to_excel_empty(self, db):
         db.to_excel(TEST_EXCEL_FILENAME)
         assert os.path.exists(TEST_EXCEL_FILENAME)
         os.unlink(TEST_EXCEL_FILENAME)
+
+    def test_read_excel(self, db):
+        db.read_excel('excel_db.xlsx')
+        assert len(db) == 3 and len(db[db.bvids()[0]]) > 10
