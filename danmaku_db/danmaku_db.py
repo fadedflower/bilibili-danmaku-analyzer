@@ -12,33 +12,38 @@ import pandas as pd
 import danmaku_db.dm_pb2 as Danmaku
 import requests
 import json
+from wordcloud import WordCloud
+import spacy_pkuseg as pkuseg
+from PIL import Image
 
 
 class DanmakuDB:
     """DanmakuDB class.
 
-    DanmakuDB objects are the ones responsible of fetching video danmakus
+    DanmakuDB objects are the ones responsible for fetching video danmakus
     and exporting them to an Excel sheet.
     """
+
     def __init__(self):
         """Create a DanmakuDB object"""
         self.danmaku_dict = {}
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Size of danmaku bvids"""
         return len(self.danmaku_dict)
 
-    def __getitem__(self, item):
-        """Get the danmaku at the specified index"""
-        return self.danmaku_dict[item]
+    def __getitem__(self, bvid) -> list:
+        """Get the danmaku list of the video of the specified bvid"""
+        return self.danmaku_dict[bvid]
 
-    def __setitem__(self, key, value):
-        """Set the danmaku at the specified index"""
-        self.danmaku_dict[key] = value
+    def __setitem__(self, bvid: str, danmaku_list: list):
+        """Set the danmaku list of the video of the specified bvid"""
+        self.danmaku_dict[bvid] = danmaku_list
 
-    async def fetch_from_video(self, bvid, credential=None):
+    async def fetch_from_video(self, bvid: str, credential=None):
         """Fetch danmakus from specific video and add them to the database"""
-        def fetch_danmaku_segment(cid, segment_index):
+
+        def fetch_danmaku_segment(segment_index) -> list:
             api_url = 'https://api.bilibili.com/x/v2/dm/web/seg.so'
             # segment_index: 从1开始，每个片段代表一个6分钟的视频片段下的弹幕数据
             params = {
@@ -46,7 +51,6 @@ class DanmakuDB:
                 'oid': cid,
                 'segment_index': segment_index
             }
-            resp = None
             # 登录后获取的弹幕内容更完整
             if credential is None:
                 resp = requests.get(api_url, params)
@@ -79,17 +83,17 @@ class DanmakuDB:
         segments = math.ceil(info['duration'] / (60 * 6))
         danmaku_list = []
         for seg in range(1, segments + 1):
-            danmaku_list += fetch_danmaku_segment(cid, seg)
+            danmaku_list += fetch_danmaku_segment(seg)
         self.danmaku_dict[bvid] = danmaku_list
 
-    async def fetch_from_search_result(self, keyword, max_n, credential=None):
+    async def fetch_from_search_result(self, keyword: str, max_n: int, credential=None):
         """Fetch danmakus from videos in the search result and add them to the database"""
         total_count = 0
         num_results = None
         page = 1
         while total_count < max_n and (num_results is None or total_count < num_results):
-            search_result = await bapi.search.search_by_type(keyword, SearchObjectType.VIDEO, OrderVideo.TOTALRANK
-                                                             , page=page)
+            search_result = await bapi.search.search_by_type(keyword, SearchObjectType.VIDEO, OrderVideo.TOTALRANK,
+                                                             page=page)
             num_results = search_result['numResults']
             # 计算该页应当获取的视频数
             fetch_count = min(max_n, num_results, total_count + len(search_result['result'])) - total_count
@@ -104,8 +108,15 @@ class DanmakuDB:
             total_count += fetch_count
             page += 1
 
-    def to_excel(self, filename):
-        """Write danmakus to Excel sheets"""
+    def to_list(self) -> list:
+        """Combine all the danmakus of the videos and create a list"""
+        danmakus_list = []
+        for v in self.danmaku_dict.values():
+            danmakus_list += v
+        return danmakus_list
+
+    def to_excel(self, filename: str):
+        """Write danmakus and related info to Excel sheets"""
         if len(self.danmaku_dict) == 0:
             raise ValueError('Empty database')
         danmaku_dataframe = pd.DataFrame()
@@ -117,29 +128,78 @@ class DanmakuDB:
             else:
                 video_danmaku_dataframe = pd.DataFrame({bvid: danmakus})
                 danmaku_dataframe = pd.concat([danmaku_dataframe, video_danmaku_dataframe], axis=1)
-
         danmaku_dataframe.to_excel(filename, sheet_name='danmakus', index=False)
+        del danmaku_dataframe
         with pd.ExcelWriter(filename, mode='a', engine='openpyxl') as writer:
-            danmaku_value_counts = pd.concat([danmaku_dataframe[col] for col in danmaku_dataframe.columns], ignore_index=True).value_counts()
-            danmaku_value_counts.name = 'Counts'
-            danmaku_value_counts.to_excel(writer, sheet_name='danmakus_count')
+            danmaku_frequency = pd.Series(self.to_list()).value_counts()
+            danmaku_frequency.name = 'Counts'
+            danmaku_frequency.to_excel(writer, sheet_name='danmakus_frequency')
 
-    def read_excel(self, filename):
+    def to_wordcloud(self, font_path: str = 'danmaku_db/fzht.ttf') -> Image:
+        """Generate word cloud image based on danmakus"""
+        if len(self.danmaku_dict) == 0:
+            raise ValueError('Empty database')
+        excluded_words = ['将', '\n', '地', '小说', '侧', '又', '一雄', '如何', '什么', '可以', '吗', '只是', '他',
+                          '本', '们',
+                          ' ',
+                          '…', '把', '人', '很', '那么', '着', '太', '能', '给', '不是', '里', '被', '就是', '一个',
+                          '没有',
+                          '剧',
+                          '让', '/', '而', '与', '一部', '的', '我', '你', '她', '我们', '你们', '他们', '是', '在',
+                          '了', '有',
+                          '这', '那', '就', '也', '还', '但', '如果', '然后', '因为', '所以', '一', '二', '三', '四',
+                          '五',
+                          '六',
+                          '七', '八', '九', '十', '百', '千', '万', '个', '这些', '那些', '更', '最', '好', '坏', '大',
+                          '小',
+                          '高',
+                          '低', '长', '短', '新', '旧', '常', '少', '多', '全', '每', '些', '去', '来', '到', '从',
+                          '为', '以',
+                          '对',
+                          '和', '或', '及', '上', '下', '中', '前', '后', '左', '右', '内', '外', '间', '部', '种',
+                          '年', '月',
+                          '日',
+                          '时', '分', '秒', '这个', '那个', '这样', '那样', '一些', '很多', '非常', '可能', '一定',
+                          '一直',
+                          '经常',
+                          '不断', '不只', '不要', '不得', '不能', '无法', '没法', '必须', '应该', '需要', '会', '想',
+                          '要',
+                          '找',
+                          '看', '听', '说', '写', '读', '学', '做', '吃', '喝', '睡', '玩', '工作', '生活', '家庭',
+                          '朋友',
+                          '嫌',
+                          '之',
+                          '感觉', '思考', '想法', '方法', '原因', '结果', '可能性', '比较', '不同', '相同', '重要',
+                          '容易',
+                          '困难',
+                          '简单', '复杂', '正确', '错误', '，', '。', '！', '？', '；', '：', '“', '”', '‘', '’', '（', '）',
+                          '【', '】',
+                          '《',
+                          '》', '——', '—', '·', '、', '～']
+        seg = pkuseg.pkuseg(model_name='web')
+        word_frequency = pd.Series([[word for word in seg.cut(d) if word not in excluded_words]
+                                    for d in self.to_list()]).explode(ignore_index=True).value_counts()
+        wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=500)\
+            .generate_from_frequencies(word_frequency.to_dict())
+
+        return wordcloud.to_image()
+
+    def read_excel(self, filename: str):
         """Load danmakus from Excel sheets"""
         danmaku_dataframe = pd.read_excel(filename, sheet_name='danmakus')
         self.danmaku_dict = danmaku_dataframe.to_dict('list')
         # 滤去NAN
         for bvid in self.danmaku_dict.keys():
-            self.danmaku_dict[bvid] = list(filter(lambda d: isinstance(d, str), self.danmaku_dict[bvid]))
+            self.danmaku_dict[bvid] = [danmaku for danmaku in self.danmaku_dict[bvid] if isinstance(danmaku, str)]
 
-    def append(self, bvid, danmaku):
+    def append(self, bvid: str, danmaku: str):
         """Append a danmaku to the database manually"""
         if bvid in self.danmaku_dict.keys():
             self.danmaku_dict[bvid].append(danmaku)
         else:
             self.danmaku_dict[bvid] = [danmaku]
 
-    def bvids(self):
+    def bvids(self) -> list:
         """Get the bvid list of the database"""
         return list(self.danmaku_dict.keys())
 
