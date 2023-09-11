@@ -2,16 +2,19 @@
 # coding: utf-8
 
 import asyncio
-import bilibili_api as bapi
-from danmaku_db import DanmakuDB
+from analyzer_server import AnalyzerServer
 
 
-async def main() -> None:
-    db = DanmakuDB()
-    # credential = bapi.login.login_with_qrcode()
-    await db.fetch_from_video('BV1j4411W7F7')
-    db.to_wordcloud()
+async def main():
+    server = AnalyzerServer()
+    await server.run()
+    print('本地服务器已启动，请访问“http://localhost:8080/ui/index.html”以使用该工具。')
+    print('按下“Ctrl+C”以停止服务器运行...')
+    await asyncio.Event().wait()
 
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(main())
+    try:
+        asyncio.get_event_loop().run_until_complete(main())
+    except KeyboardInterrupt:
+        pass

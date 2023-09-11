@@ -7,10 +7,9 @@ import math
 import bilibili_api as bapi
 from bilibili_api.search import SearchObjectType
 from bilibili_api.search import OrderVideo
-import bilibili_api.utils.credential as bapi_credential
 import pandas as pd
-import danmaku_db.dm_pb2 as Danmaku
-import requests
+import xml.etree.ElementTree as xmlReader
+import io
 import json
 from wordcloud import WordCloud
 import spacy_pkuseg as pkuseg
@@ -40,53 +39,24 @@ class DanmakuDB:
         """Set the danmaku list of the video of the specified bvid"""
         self.danmaku_dict[bvid] = danmaku_list
 
-    async def fetch_from_video(self, bvid: str, credential=None):
+    async def fetch_from_video(self, bvid: str):
         """Fetch danmakus from specific video and add them to the database"""
-
-        def fetch_danmaku_segment(segment_index) -> list:
-            api_url = 'https://api.bilibili.com/x/v2/dm/web/seg.so'
-            # segment_index: 从1开始，每个片段代表一个6分钟的视频片段下的弹幕数据
-            params = {
-                'type': 1,
-                'oid': cid,
-                'segment_index': segment_index
-            }
-            # 登录后获取的弹幕内容更完整
-            if credential is None:
-                resp = requests.get(api_url, params)
-            elif isinstance(credential, bapi_credential.Credential):
-                resp = requests.get(api_url, params, cookies=credential.get_cookies())
-            else:
-                raise TypeError('Provided credential is of incorrect type')
-
-            data = resp.content
-            # 调用编译的Protobuf类对弹幕数据反序列化
-            danmaku_seg = Danmaku.DmSegMobileReply()
-            danmaku_seg.ParseFromString(data)
-            # 获取弹幕内容
-            danmaku_array = []
-            for elem in danmaku_seg.elems:
-                # 特殊处理高级弹幕，其内容为一个数组，弹幕实际内容在4号元素
-                try:
-                    advanced_danmaku = json.loads(elem.content)
-                    if isinstance(advanced_danmaku, list):
-                        danmaku_array.append(advanced_danmaku[4])
-                    else:
-                        danmaku_array.append(elem.content)
-                except json.decoder.JSONDecodeError:
-                    danmaku_array.append(elem.content)
-            return danmaku_array
-
         video = bapi.video.Video(bvid)
-        cid = await video.get_cid(0)
-        info = await video.get_info()
-        segments = math.ceil(info['duration'] / (60 * 6))
-        danmaku_list = []
-        for seg in range(1, segments + 1):
-            danmaku_list += fetch_danmaku_segment(seg)
+        danmaku_xml = await video.get_danmaku_xml(page_index=0)
+        xml_tree = xmlReader.parse(io.StringIO(danmaku_xml))
+        xml_root = xml_tree.getroot()
+        danmaku_list = [d.text for d in xml_root.findall('./d')]
+        for i in range(len(danmaku_list)):
+            # 特殊处理高级弹幕，其内容为一个数组，弹幕实际内容在4号元素
+            try:
+                advanced_danmaku = json.loads(danmaku_list[i])
+                if isinstance(advanced_danmaku, list):
+                    danmaku_list[i] = advanced_danmaku[4]
+            except json.decoder.JSONDecodeError:
+                pass
         self.danmaku_dict[bvid] = danmaku_list
 
-    async def fetch_from_search_result(self, keyword: str, max_n: int, credential=None):
+    async def fetch_from_search_result(self, keyword: str, max_n: int):
         """Fetch danmakus from videos in the search result and add them to the database"""
         total_count = 0
         num_results = None
@@ -97,14 +67,8 @@ class DanmakuDB:
             num_results = search_result['numResults']
             # 计算该页应当获取的视频数
             fetch_count = min(max_n, num_results, total_count + len(search_result['result'])) - total_count
-            # 尝试以3个视频为一组进行并发执行
-            fetch_group_count = 3
-            for grp in range(0, fetch_count, fetch_group_count):
-                fetch_tasks = [
-                    asyncio.create_task(self.fetch_from_video(search_result['result'][i]['bvid'], credential))
-                    for i in range(grp, min(grp + fetch_group_count, fetch_count))]
-                for task in fetch_tasks:
-                    await task
+            for i in range(fetch_count):
+                await self.fetch_from_video(search_result['result'][i]['bvid'])
             total_count += fetch_count
             page += 1
 
