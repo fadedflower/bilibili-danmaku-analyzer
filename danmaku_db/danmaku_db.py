@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import asyncio
-import math
-
 import bilibili_api as bapi
 from bilibili_api.search import SearchObjectType
 from bilibili_api.search import OrderVideo
@@ -13,6 +10,7 @@ import io
 import json
 from wordcloud import WordCloud
 import spacy_pkuseg as pkuseg
+import string
 from PIL import Image
 
 
@@ -122,7 +120,7 @@ class DanmakuDB:
                           '和', '或', '及', '上', '下', '中', '前', '后', '左', '右', '内', '外', '间', '部', '种',
                           '年', '月',
                           '日',
-                          '时', '分', '秒', '这个', '那个', '这样', '那样', '一些', '很多', '非常', '可能', '一定',
+                          '时', '分', '秒', '这里', '这个', '那个', '这样', '那样', '一些', '很多', '非常', '可能', '一定',
                           '一直',
                           '经常',
                           '不断', '不只', '不要', '不得', '不能', '无法', '没法', '必须', '应该', '需要', '会', '想',
@@ -138,7 +136,12 @@ class DanmakuDB:
                           '简单', '复杂', '正确', '错误', '，', '。', '！', '？', '；', '：', '“', '”', '‘', '’', '（', '）',
                           '【', '】',
                           '《',
-                          '》', '——', '—', '·', '、', '～']
+                          '》', '——', '—', '·', '、', '～', '@', '?', '啊', '吧', '呢', '都', '过', '没', '得', '=', '~',
+                          '追', '比', '呀', '跟', '啦', '哇', '不', '……', '…', '这不', '连', '懂', '真', '怎么',
+                          '已经', '这么', '么', '超', '好像', '想到', '再', '变', '的话', '啊啊', '还是', '才', '为什么', '还有',
+                          '别', '次', '事', '用', '条', '开', '两', '打', '哦', '只', '头', '哪', '男', '女', '段', '啥', '自',
+                          '谁', '撅', '快', '最后', '等', '开', '它', '噗', '嗷', '噢', '哼', '唉', '啦', '嘞']
+        excluded_words += list(string.punctuation + string.digits + string.ascii_letters)
         seg = pkuseg.pkuseg(model_name='web')
         word_frequency = pd.Series([[word for word in seg.cut(d) if word not in excluded_words]
                                     for d in self.to_list()]).explode(ignore_index=True).value_counts()
