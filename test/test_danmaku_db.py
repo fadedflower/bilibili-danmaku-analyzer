@@ -11,8 +11,8 @@ TEST_VALID_BVID2 = 'BV1yt4y1Q7SS'
 TEST_MISSING_BVID = 'BV1gt411z78v'
 TEST_INVALID_BVID = 'BV1'
 TEST_EXCEL_FILENAME = 'test_danmakus.xlsx'
-TEST_EXCEL_READ_FILENAME = 'excel_db.xlsx'
-TEST_WORDCLOUD_FILENAME = 'wordcloud.png'
+TEST_EXCEL_READ_FILENAME = 'test/excel_db.xlsx'
+TEST_WORDCLOUD_FILENAME = 'test/wordcloud.png'
 TEST_KEYWORD = '让子弹飞'
 
 
@@ -82,13 +82,13 @@ class TestDanmakuDB:
     @pytest.mark.asyncio
     async def test_to_excel_full(self, db):
         await db.fetch_from_video(TEST_VALID_BVID1)
-        db.to_wordcloud().save('')
+        db.to_excel(TEST_EXCEL_FILENAME)
         assert os.path.exists(TEST_EXCEL_FILENAME)
         os.unlink(TEST_EXCEL_FILENAME)
 
     @pytest.mark.asyncio
     async def test_to_wordcloud(self, db):
         await db.fetch_from_video(TEST_VALID_BVID1)
-        db.to_wordcloud('../danmaku_db/fzht.ttf').save(TEST_WORDCLOUD_FILENAME)
+        db.to_wordcloud(800, 500, 'danmaku_db/fzht.ttf').save(TEST_WORDCLOUD_FILENAME)
         assert os.path.exists(TEST_WORDCLOUD_FILENAME)
         os.unlink(TEST_WORDCLOUD_FILENAME)

@@ -58,18 +58,17 @@ class DanmakuDB:
 
     async def fetch_from_search_result(self, keyword: str, max_n: int):
         """Fetch danmakus from videos in the search result and add them to the database"""
-        total_count = 0
         num_results = None
         page = 1
-        while total_count < max_n and (num_results is None or total_count < num_results):
+        while len(self.danmaku_dict) < max_n and (num_results is None or len(self.danmaku_dict) < num_results):
             search_result = await bapi.search.search_by_type(keyword, SearchObjectType.VIDEO, OrderVideo.TOTALRANK,
                                                              page=page)
             num_results = search_result['numResults']
             # 计算该页应当获取的视频数
-            fetch_count = min(max_n, num_results, total_count + len(search_result['result'])) - total_count
+            fetch_count = (min(max_n, num_results, len(self.danmaku_dict) + len(search_result['result']))
+                           - len(self.danmaku_dict))
             for i in range(fetch_count):
                 await self.fetch_from_video(search_result['result'][i]['bvid'])
-            total_count += fetch_count
             page += 1
 
     def to_list(self) -> list:
@@ -99,7 +98,7 @@ class DanmakuDB:
             danmaku_frequency.name = 'Counts'
             danmaku_frequency.to_excel(writer, sheet_name='danmakus_frequency')
 
-    def to_wordcloud(self, font_path: str = 'danmaku_db/fzht.ttf') -> Image:
+    def to_wordcloud(self, width: int, height: int, font_path: str = 'danmaku_db/fzht.ttf') -> Image:
         """Generate word cloud image based on danmakus"""
         if len(self.danmaku_dict) == 0:
             raise ValueError('Empty database')
@@ -143,7 +142,7 @@ class DanmakuDB:
         seg = pkuseg.pkuseg(model_name='web')
         word_frequency = pd.Series([[word for word in seg.cut(d) if word not in excluded_words]
                                     for d in self.to_list()]).explode(ignore_index=True).value_counts()
-        wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=500)\
+        wordcloud = WordCloud(font_path=font_path, background_color='white', width=width, height=height)\
             .generate_from_frequencies(word_frequency.to_dict())
 
         return wordcloud.to_image()
