@@ -108,7 +108,7 @@ class DanmakuDB:
         """Generate word cloud image based on danmakus"""
         if len(self.danmaku_dict) == 0:
             raise ValueError('Empty database')
-        excluded_words = {'将', '\n', '地', '小说', '侧', '又', '一雄', '如何', '什么', '可以', '吗', '只是', '他',
+        excluded_words = ['将', '\n', '地', '小说', '侧', '又', '一雄', '如何', '什么', '可以', '吗', '只是', '他',
                           '本', '们',
                           ' ',
                           '…', '把', '人', '很', '那么', '着', '太', '能', '给', '不是', '里', '被', '就是', '一个',
@@ -148,7 +148,7 @@ class DanmakuDB:
                           '追', '比', '呀', '跟', '啦', '哇', '不', '……', '…', '这不', '连', '懂', '真', '怎么',
                           '已经', '这么', '么', '超', '好像', '想到', '再', '变', '的话', '啊啊', '还是', '才', '为什么', '还有',
                           '别', '次', '事', '用', '条', '开', '两', '打', '哦', '只', '头', '哪', '男', '女', '段', '啥', '自',
-                          '谁', '撅', '快', '最后', '等', '开', '它', '噗', '嗷', '噢', '哼', '唉', '啦', '嘞'}
+                          '谁', '撅', '快', '最后', '等', '开', '它', '噗', '嗷', '噢', '哼', '唉', '啦', '嘞']
         excluded_words += list(string.punctuation + string.digits + string.ascii_letters)
         seg = pkuseg.pkuseg(model_name='web')
         word_frequency = pd.Series([[word for word in seg.cut(d) if word not in excluded_words]

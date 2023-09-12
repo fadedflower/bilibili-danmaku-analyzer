@@ -104,7 +104,7 @@ class ApiHandler:
             'top_danmakus': [{
                 'danmaku': danmaku,
                 'count': count
-            } for danmaku, count in ApiHandler.db.top_danmakus(params['n'])]
+            } for danmaku, count in ApiHandler.db.top_danmakus(params['n']).items()]
         }
         return ApiHelper.response(data=data)
 

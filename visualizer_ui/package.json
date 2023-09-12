@@ -10,8 +10,12 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.6",
+    "axios": "^1.5.0",
+    "chart.js": "^4.4.0",
     "quasar": "^2.12.6",
-    "vue": "^3.3.4"
+    "vue": "^3.3.4",
+    "vue-chartjs": "^5.2.0",
+    "vue-router": "^4.2.4"
   },
   "devDependencies": {
     "@quasar/vite-plugin": "^1.5.0",
