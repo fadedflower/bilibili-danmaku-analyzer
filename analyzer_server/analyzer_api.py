@@ -72,7 +72,7 @@ class ApiHandler:
     @staticmethod
     @ApiRoutes.get('/api/fetch')
     @validate_param({'keyword': str, 'n': int})
-    async def fetch(request: web.Request, **params):
+    async def fetch(_request: web.Request, **params):
         """Request handler for fetching videos' danmakus from search results"""
         ApiHandler.db.clear()
         await ApiHandler.db.fetch_from_search_result(params['keyword'], params['n'])
@@ -80,12 +80,11 @@ class ApiHandler:
 
     @staticmethod
     @ApiRoutes.get('/api/wordcloud')
-    @validate_param({'width': int, 'height': int})
-    async def wordcloud(request: web.Request, **params):
+    async def wordcloud(_request: web.Request):
         """Request handler for generating word cloud image"""
         if len(ApiHandler.db) == 0:
             return ApiHelper.response(1)
-        image = ApiHandler.db.to_wordcloud(params['width'], params['height'])
+        image = ApiHandler.db.to_wordcloud()
         image_buf = io.BytesIO()
         image.save(image_buf, 'png')
         image_buf.seek(0)
@@ -94,7 +93,7 @@ class ApiHandler:
     @staticmethod
     @ApiRoutes.get('/api/top_danmakus')
     @validate_param({'n': int})
-    async def top_danmakus(request: web.Request, **params):
+    async def top_danmakus(_request: web.Request, **params):
         """Request handler for getting top danmakus"""
         if params['n'] <= 0:
             return ApiHelper.response(4)
@@ -111,8 +110,8 @@ class ApiHandler:
     @staticmethod
     @ApiRoutes.get('/api/export_excel')
     @validate_param({'filename': str})
-    async def export_excel(request: web.Request, **params):
-        """Request handler for exporting excel sheets"""
+    async def export_excel(_request: web.Request, **params):
+        """Request handler for exporting Excel sheets"""
         if len(ApiHandler.db) == 0:
             return ApiHelper.response(1)
         ApiHandler.db.to_excel(params['filename'])
@@ -120,7 +119,7 @@ class ApiHandler:
 
     @staticmethod
     @ApiRoutes.get('/api/db_info')
-    async def db_info(request: web.Request):
+    async def db_info(_request: web.Request):
         """Request handler for getting database info"""
         data = {
             'total_video_count': len(ApiHandler.db),
@@ -133,7 +132,7 @@ class ApiHandler:
     @staticmethod
     @ApiRoutes.get('/api/db_data')
     @validate_param({'bvid': str, 'size': int, 'page': int})
-    async def db_data(request: web.Request, **param):
+    async def db_data(_request: web.Request, **param):
         """Request handler for getting database info"""
         if param['bvid'] not in ApiHandler.db.bvids():
             return ApiHelper.response(2)

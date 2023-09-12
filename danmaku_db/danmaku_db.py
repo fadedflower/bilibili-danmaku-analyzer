@@ -12,6 +12,8 @@ from wordcloud import WordCloud
 import spacy_pkuseg as pkuseg
 import string
 from PIL import Image
+import os.path as path
+from imageio.v2 import imread
 
 
 class DanmakuDB:
@@ -104,7 +106,8 @@ class DanmakuDB:
             danmaku_frequency.name = 'Counts'
             danmaku_frequency.to_excel(writer, sheet_name='danmakus_frequency')
 
-    def to_wordcloud(self, width: int, height: int, font_path: str = 'danmaku_db/fzht.ttf') -> Image:
+    def to_wordcloud(self, font_path: str = path.join('danmaku_db', 'fzht.ttf'),
+                     mask_path: str = path.join('danmaku_db', 'earth.png')) -> Image:
         """Generate word cloud image based on danmakus"""
         if len(self.danmaku_dict) == 0:
             raise ValueError('Empty database')
@@ -153,7 +156,8 @@ class DanmakuDB:
         seg = pkuseg.pkuseg(model_name='web')
         word_frequency = pd.Series([[word for word in seg.cut(d) if word not in excluded_words]
                                     for d in self.to_list()]).explode(ignore_index=True).value_counts()
-        wordcloud = WordCloud(font_path=font_path, background_color='white', width=width, height=height)\
+        mask = imread(mask_path)
+        wordcloud = WordCloud(font_path=font_path, background_color='white', mask=mask)\
             .generate_from_frequencies(word_frequency.to_dict())
 
         return wordcloud.to_image()

@@ -94,6 +94,6 @@ class TestDanmakuDB:
     @pytest.mark.asyncio
     async def test_to_wordcloud(self, db):
         await db.fetch_from_video(TEST_VALID_BVID1)
-        db.to_wordcloud(800, 500, 'danmaku_db/fzht.ttf').save(TEST_WORDCLOUD_FILENAME)
+        db.to_wordcloud().save(TEST_WORDCLOUD_FILENAME)
         assert os.path.exists(TEST_WORDCLOUD_FILENAME)
         os.unlink(TEST_WORDCLOUD_FILENAME)
