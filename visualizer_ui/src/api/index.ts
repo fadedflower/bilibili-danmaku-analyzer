@@ -14,12 +14,20 @@ export default {
         })
     },
 
-    async top_danmakus(n: number): Promise<[DanmakuFrequency]>{
+    async topDanmakus(n: number): Promise<[DanmakuFrequency]>{
         const response = await request({
             url: '/top_danmakus',
             method: 'get',
             params: { n }
         })
         return response.data.top_danmakus
+    },
+
+    async exportExcel(filename: string){
+        await request({
+            url: '/export_excel',
+            method: 'get',
+            params: { filename }
+        })
     }
 }
