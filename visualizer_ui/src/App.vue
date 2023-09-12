@@ -13,10 +13,6 @@
           Bilibili视频弹幕分析可视化工具
         </q-toolbar-title>
       </q-toolbar>
-      <q-tabs align="left">
-        <q-route-tab to="/main" label="主面板" />
-        <q-route-tab to="/danmaku" label="弹幕数据" />
-      </q-tabs>
     </q-header>
 
     <q-page-container>
