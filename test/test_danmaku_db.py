@@ -63,6 +63,11 @@ class TestDanmakuDB:
         assert len(db.to_list()) > 10
 
     @pytest.mark.asyncio
+    async def test_top_danmakus(self, db):
+        await db.fetch_from_video(TEST_VALID_BVID1)
+        assert len(db.top_danmakus(10)) == 10
+
+    @pytest.mark.asyncio
     async def test_to_excel_full(self, db):
         await db.fetch_from_video(TEST_VALID_BVID1)
         db.to_excel(TEST_EXCEL_FILENAME)
