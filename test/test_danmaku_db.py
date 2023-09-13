@@ -45,7 +45,7 @@ class TestDanmakuDB:
 
     @pytest.mark.asyncio
     async def test_fetch_valid(self, danmaku_db):
-        """Test valid fetch_from_video function call"""
+        """Test fetch_from_video function"""
         await danmaku_db.fetch_from_video(TEST_VALID_BVID1)
         await danmaku_db.fetch_from_video(TEST_VALID_BVID2)
         assert TEST_VALID_BVID1 in danmaku_db.bvids() and TEST_VALID_BVID2 in danmaku_db.bvids()
@@ -63,11 +63,23 @@ class TestDanmakuDB:
         """Test invalid fetch_from_video function call"""
         await danmaku_db.fetch_from_video(TEST_INVALID_BVID)
 
+    @pytest.mark.xfail
+    @pytest.mark.asyncio
+    async def test_fetch_empty(self, danmaku_db):
+        """Test invalid fetch_from_video function call"""
+        await danmaku_db.fetch_from_video('')
+
     @pytest.mark.asyncio
     async def test_fetch_search(self, danmaku_db):
         """Test fetch_from_search_result function"""
         await danmaku_db.fetch_from_search_result(TEST_KEYWORD, 30)
         assert len(danmaku_db) == 30 and len(danmaku_db[danmaku_db.bvids()[0]]) > 10
+
+    @pytest.mark.xfail
+    @pytest.mark.asyncio
+    async def test_fetch_search_empty(self, danmaku_db):
+        """Test invalid fetch_from_search_result function call"""
+        await danmaku_db.fetch_from_search_result('', -1)
 
     @pytest.mark.asyncio
     async def test_to_list(self, danmaku_db):
@@ -81,20 +93,38 @@ class TestDanmakuDB:
         await danmaku_db.fetch_from_video(TEST_VALID_BVID1)
         assert len(danmaku_db.top_danmakus(10)) == 10
 
+    @pytest.mark.xfail
+    @pytest.mark.asyncio
+    async def test_top_danmakus_invalid_n(self, danmaku_db):
+        """Test invalid test_top_danmakus function call"""
+        await danmaku_db.fetch_from_video(TEST_VALID_BVID1)
+        danmaku_db.top_danmakus(0)
+
+    def test_top_danmakus_empty(self, danmaku_db):
+        """Test test_top_danmakus function call with empty database"""
+        assert danmaku_db.top_danmakus(10) == {}
+
     @pytest.mark.asyncio
     async def test_to_excel_full(self, danmaku_db):
-        """Test valid to_excel function call"""
+        """Test to_excel function call"""
         await danmaku_db.fetch_from_video(TEST_VALID_BVID1)
         danmaku_db.to_excel(TEST_EXCEL_FILENAME)
         assert os.path.exists(TEST_EXCEL_FILENAME)
         os.unlink(TEST_EXCEL_FILENAME)
 
     @pytest.mark.xfail
-    def test_to_excel_empty(self, danmaku_db):
+    def test_to_excel_empty_db(self, danmaku_db):
         """Test invalid to_excel function call"""
         danmaku_db.to_excel(TEST_EXCEL_FILENAME)
         assert os.path.exists(TEST_EXCEL_FILENAME)
         os.unlink(TEST_EXCEL_FILENAME)
+
+    @pytest.mark.xfail
+    @pytest.mark.asyncio
+    async def test_to_excel_empty_filename(self, danmaku_db):
+        """Test invalid to_excel function call"""
+        await danmaku_db.fetch_from_video(TEST_VALID_BVID1)
+        danmaku_db.to_excel('')
 
     def test_read_excel(self, danmaku_db):
         """Test read_excel function call"""

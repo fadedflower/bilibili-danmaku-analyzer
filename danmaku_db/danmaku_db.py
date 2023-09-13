@@ -43,6 +43,8 @@ class DanmakuDB:
 
     async def fetch_from_video(self, bvid: str):
         """Fetch danmakus from specific video and add them to the database"""
+        if bvid == '':
+            raise ValueError('Empty bvid')
         video = bapi.video.Video(bvid)
         danmaku_xml = await video.get_danmaku_xml(page_index=0)
         xml_tree = xmlReader.parse(io.StringIO(danmaku_xml))
@@ -60,6 +62,10 @@ class DanmakuDB:
 
     async def fetch_from_search_result(self, keyword: str, max_n: int):
         """Fetch danmakus from videos in the search result and add them to the database"""
+        if keyword == '':
+            raise ValueError('Empty keyword')
+        if max_n <= 0:
+            raise ValueError('Invalid n number')
         num_results = None
         page = 1
         while (len(self.danmaku_dict) < max_n and
@@ -95,6 +101,8 @@ class DanmakuDB:
         """Write danmakus and related info to Excel sheets"""
         if len(self.danmaku_dict) == 0:
             raise ValueError('Empty database')
+        if filename == '':
+            raise ValueError('Empty filename')
         danmaku_dataframe = pd.DataFrame()
         for bvid, danmakus in self.danmaku_dict.items():
             # 根据需要增加行数
