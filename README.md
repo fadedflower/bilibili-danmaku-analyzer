@@ -2,11 +2,11 @@
 
 该工具的分析原理是用特定的关键字搜索Bilibili，从默认排序的搜索结果中拉取多个视频的弹幕数据，随后输出弹幕云图并统计数量位于前20的弹幕。
 
-# 模块构成
+## 模块构成
 
 本工具主要由两大模块组成：`danmaku_db`和`analyzer_server`。其中，`analyzer_server`对外提供Web API接口以及调用该接口的UI页面，而`danmaku_db`负责调用Bilibili API获取视频弹幕数据并输出数据分析结果。
 
-# 构建
+## 构建
 
 在构建前请确保你已经安装了Python3.x以及Node.js。
 
