@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import bilibili_api as bapi
-from bilibili_api.search import SearchObjectType
-from bilibili_api.search import OrderVideo
-import pandas as pd
+"""Provides DanmakuDB class for fetching and managing danmakus"""
+
 import xml.etree.ElementTree as xmlReader
 import io
 import json
+import string
+from os import path
 from wordcloud import WordCloud
 import spacy_pkuseg as pkuseg
-import string
 from PIL import Image
-import os.path as path
+import pandas as pd
 from imageio.v2 import imread
+import bilibili_api as bapi
+from bilibili_api.search import SearchObjectType
+from bilibili_api.search import OrderVideo
 
 
 class DanmakuDB:
@@ -46,7 +48,7 @@ class DanmakuDB:
         xml_tree = xmlReader.parse(io.StringIO(danmaku_xml))
         xml_root = xml_tree.getroot()
         danmaku_list = [d.text for d in xml_root.findall('./d')]
-        for i in range(len(danmaku_list)):
+        for i, _d in enumerate(danmaku_list):
             # 特殊处理高级弹幕，其内容为一个数组，弹幕实际内容在4号元素
             try:
                 advanced_danmaku = json.loads(danmaku_list[i])
@@ -60,13 +62,16 @@ class DanmakuDB:
         """Fetch danmakus from videos in the search result and add them to the database"""
         num_results = None
         page = 1
-        while len(self.danmaku_dict) < max_n and (num_results is None or len(self.danmaku_dict) < num_results):
-            search_result = await bapi.search.search_by_type(keyword, SearchObjectType.VIDEO, OrderVideo.TOTALRANK,
+        while (len(self.danmaku_dict) < max_n and
+               (num_results is None or len(self.danmaku_dict) < num_results)):
+            search_result = await bapi.search.search_by_type(keyword,
+                                                             SearchObjectType.VIDEO,
+                                                             OrderVideo.TOTALRANK,
                                                              page=page)
             num_results = search_result['numResults']
             # 计算该页应当获取的视频数
-            fetch_count = (min(max_n, num_results, len(self.danmaku_dict) + len(search_result['result']))
-                           - len(self.danmaku_dict))
+            fetch_count = (min(max_n, num_results, len(self.danmaku_dict) +
+                               len(search_result['result'])) - len(self.danmaku_dict))
             for i in range(fetch_count):
                 await self.fetch_from_video(search_result['result'][i]['bvid'])
             page += 1
@@ -74,8 +79,8 @@ class DanmakuDB:
     def to_list(self) -> list:
         """Combine all the danmakus of the videos and create a list"""
         danmakus_list = []
-        for v in self.danmaku_dict.values():
-            danmakus_list += v
+        for danmaku in self.danmaku_dict.values():
+            danmakus_list += danmaku
         return danmakus_list
 
     def top_danmakus(self, max_n: int) -> dict:
@@ -93,7 +98,8 @@ class DanmakuDB:
         danmaku_dataframe = pd.DataFrame()
         for bvid, danmakus in self.danmaku_dict.items():
             # 根据需要增加行数
-            danmaku_dataframe = danmaku_dataframe.reindex(range(max(len(danmaku_dataframe), len(danmakus))))
+            danmaku_dataframe = danmaku_dataframe.reindex(
+                range(max(len(danmaku_dataframe), len(danmakus))))
             if danmaku_dataframe.empty:
                 danmaku_dataframe[bvid] = danmakus
             else:
@@ -122,8 +128,8 @@ class DanmakuDB:
                           '这', '那', '就', '也', '还', '但', '如果', '然后', '因为', '所以', '一', '二', '三', '四',
                           '五',
                           '六',
-                          '七', '八', '九', '十', '百', '千', '万', '个', '这些', '那些', '更', '最', '好', '坏', '大',
-                          '小',
+                          '七', '八', '九', '十', '百', '千', '万', '个', '这些', '那些', '更', '最', '好', '坏',
+                          '大', '小',
                           '高',
                           '低', '长', '短', '新', '旧', '常', '少', '多', '全', '每', '些', '去', '来', '到', '从',
                           '为', '以',
@@ -144,18 +150,21 @@ class DanmakuDB:
                           '感觉', '思考', '想法', '方法', '原因', '结果', '可能性', '比较', '不同', '相同', '重要',
                           '容易',
                           '困难',
-                          '简单', '复杂', '正确', '错误', '，', '。', '！', '？', '；', '：', '“', '”', '‘', '’', '（', '）',
-                          '【', '】',
-                          '《',
-                          '》', '——', '—', '·', '、', '～', '@', '?', '啊', '吧', '呢', '都', '过', '没', '得', '=', '~',
+                          '简单', '复杂', '正确', '错误',
+                          '，', '。', '！', '？', '；', '：', '“', '”', '‘', '’', '（', '）', '【', '】',
+                          '《', '》', '——', '—', '·', '、', '～', '@', '?', '=', '~',
+                          '啊', '吧', '呢', '都', '过', '没', '得',
                           '追', '比', '呀', '跟', '啦', '哇', '不', '……', '…', '这不', '连', '懂', '真', '怎么',
-                          '已经', '这么', '么', '超', '好像', '想到', '再', '变', '的话', '啊啊', '还是', '才', '为什么', '还有',
-                          '别', '次', '事', '用', '条', '开', '两', '打', '哦', '只', '头', '哪', '男', '女', '段', '啥', '自',
+                          '已经', '这么', '么', '超', '好像', '想到', '再', '变', '的话', '啊啊', '还是', '才',
+                          '为什么', '还有',
+                          '别', '次', '事', '用', '条', '开', '两', '打', '哦', '只', '头', '哪', '男', '女', '段',
+                          '啥', '自',
                           '谁', '撅', '快', '最后', '等', '开', '它', '噗', '嗷', '噢', '哼', '唉', '啦', '嘞']
         excluded_words += list(string.punctuation + string.digits + string.ascii_letters)
         seg = pkuseg.pkuseg(model_name='web')
-        word_frequency = pd.Series([[word for word in seg.cut(d) if word not in excluded_words]
-                                    for d in self.to_list()]).explode(ignore_index=True).value_counts()
+        word_frequency = (pd.Series([[word for word in seg.cut(d) if word not in excluded_words]
+                                     for d in self.to_list()])
+                          .explode(ignore_index=True).value_counts())
         mask = imread(mask_path)
         wordcloud = WordCloud(font_path=font_path, background_color='white', mask=mask)\
             .generate_from_frequencies(word_frequency.to_dict())
@@ -168,7 +177,8 @@ class DanmakuDB:
         self.danmaku_dict = danmaku_dataframe.to_dict('list')
         # 滤去NAN
         for bvid in self.danmaku_dict.keys():
-            self.danmaku_dict[bvid] = [danmaku for danmaku in self.danmaku_dict[bvid] if isinstance(danmaku, str)]
+            self.danmaku_dict[bvid] = [danmaku for danmaku in self.danmaku_dict[bvid]
+                                       if isinstance(danmaku, str)]
 
     def append(self, bvid: str, danmaku: str):
         """Append a danmaku to the database manually"""

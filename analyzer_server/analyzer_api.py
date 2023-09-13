@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
+
+"""Provides analyzer web API"""
+
 import math
 from functools import wraps
-from danmaku_db import DanmakuDB
+import io
 from aiohttp import web
 from bilibili_api import ApiException
-import io
+from danmaku_db import DanmakuDB
 
 ApiRoutes = web.RouteTableDef()
 
@@ -16,19 +19,20 @@ def validate_param(param_dict: dict):
         @wraps(handler)
         async def wrapper(request: web.Request):
             params = {}
-            for p, t in param_dict.items():
-                if p not in request.query or request.query[p] == '':
+            for param, type_class in param_dict.items():
+                if param not in request.query or request.query[param] == '':
                     return web.Response(status=400, text="Bad request")
-                if t == bool and not request.query[p].lower() == 'true' and not request.query[p].lower() == 'false':
+                if (type_class == bool and not request.query[param].lower() == 'true'
+                        and not request.query[param].lower() == 'false'):
                     return web.Response(status=400, text="Bad request")
                 try:
-                    params[p] = t(request.query[p])
+                    params[param] = type_class(request.query[param])
                 except ValueError:
                     return web.Response(status=400, text="Bad request")
             try:
                 return await handler(request, **params)
-            except ApiException as e:
-                return web.Response(status=500, text=e.msg)
+            except ApiException as exception:
+                return web.Response(status=500, text=exception.msg)
         return wrapper
     return decorator
 
@@ -59,8 +63,7 @@ class ApiHelper:
         }
         if code == 0:
             return web.json_response(json_data)
-        else:
-            return web.json_response(json_data, status=403)
+        return web.json_response(json_data, status=403)
 
 
 class ApiHandler:
@@ -124,9 +127,12 @@ class ApiHandler:
         data = {
             'total_video_count': len(ApiHandler.db),
             'video_bvids': ApiHandler.db.bvids(),
-            'video_danmaku_count': {bvid: len(ApiHandler.db[bvid]) for bvid in ApiHandler.db.bvids()},
-            'total_danmaku_count': sum([len(ApiHandler.db[bvid]) for bvid in ApiHandler.db.bvids()])
+            'video_danmaku_count': {},
+            'total_danmaku_count': 0
         }
+        for bvid in ApiHandler.db.bvids():
+            data['video_danmaku_count'][bvid] = len(ApiHandler.db[bvid])
+            data['total_danmaku_count'] += len(ApiHandler.db[bvid])
         return ApiHelper.response(data=data)
 
     @staticmethod

@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+"""Entrypoint of the analyzer"""
+
 import asyncio
 from analyzer_server import AnalyzerServer
 
 
 async def main():
+    """Async entrypoint"""
     server = AnalyzerServer()
     await server.run()
     print('本地服务器已启动，请访问“http://localhost:8080/ui/main”以使用该工具。')

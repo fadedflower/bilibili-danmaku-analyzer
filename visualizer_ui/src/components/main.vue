@@ -56,7 +56,7 @@ const fetchDanmakus = (_evt: SubmitEvent | Event) => {
           chart_data.value.labels.push(v.danmaku)
           chart_data.value.datasets[0].data.push(v.count)
         })
-        wordcloudRand.value = Math.random()
+        wordcloudRand.value = Math.random() //强制重新加载图片
         isFetching.value = false
         showStatistics.value = true
         const endTime = new Date()

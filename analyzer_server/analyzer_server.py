@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from .analyzer_api import ApiRoutes
+"""Serves UI pages and API"""
+
+from os import path
 from aiohttp import web
-import os.path as path
+from .analyzer_api import ApiRoutes
 
 
 class AnalyzerServer:
     """AnalyzerServer class.
 
-    AnalyzerServer objects are the ones responsible for starting up analyzer server and serving api and ui pages.
+    AnalyzerServer objects are the ones responsible for starting up analyzer server
+    and serving api and ui pages.
     """
     ui_path = path.join('visualizer_ui', 'dist')
 
