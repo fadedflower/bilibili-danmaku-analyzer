@@ -93,7 +93,7 @@ class DanmakuDB:
         """Get top n danmakus"""
         if max_n <= 0:
             raise ValueError('Invalid n number')
-        danmaku_frequency = pd.Series(self.to_list()).value_counts()
+        danmaku_frequency = pd.Series(self.to_list(), dtype=str).value_counts()
         n = min(max_n, len(danmaku_frequency))
         return danmaku_frequency.iloc[0:n].to_dict()
 
